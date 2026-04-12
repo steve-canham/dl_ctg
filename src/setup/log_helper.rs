@@ -20,7 +20,7 @@
  
  pub fn setup_log (data_folder: &PathBuf) -> Result<log4rs::Handle, AppError> {
      let datetime_string = Local::now().format("%m-%d %H%M%S").to_string();
-     let log_file_name = format!("AACT DB procesing at {}.log", datetime_string);
+     let log_file_name = format!("CGT DB processing at {}.log", datetime_string);
      let log_file_path = [data_folder, &PathBuf::from(log_file_name)].iter().collect();
      config_log (&log_file_path)
  }
@@ -71,13 +71,18 @@
      info!("");
      info!("************************************");
      info!("");
-     info!("log_folder: {}", ip.log_folder.display());
-     info!("import mdr data: {}", ip.flags.process_mdr_data);
-     info!("import iec data: {}", ip.flags.process_iec_data);
-     info!("encode data: {}", ip.flags.code_data);
-     info!("transfer to who DB: {}", ip.flags.transfer_to_who);
-     info!("overwrite ctg DB: {}", ip.flags.overwrite_ctg);
-     info!("test run: {}", ip.flags.test_run);
+     info!("log folder: {}", ip.log_folder_path.display());
+     info!("json files folder: {}", ip.json_files_path.display());
+     info!("download recent: {}", ip.flags.download_recent);
+     info!("download set: {}", ip.flags.download_set);
+     info!("download year: {}", ip.flags.download_year);
+     info!("process recent: {}", ip.flags.process_recent);
+     info!("process set: {}", ip.flags.process_set);
+     info!("code uncoded {}", ip.flags.code_uncoded);
+     info!("code all {}", ip.flags.code_all);
+     info!("test run: {}", ip.flags.is_test);
+     info!("start date {}", match &ip.start_date {Some(s) => s, None => "None"});
+     info!("end date: {}", match &ip.end_date {Some(s) => s, None => "None"});
      info!("");
      info!("************************************");
      info!("");

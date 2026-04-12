@@ -24,20 +24,33 @@ pub async fn run(args: Vec<OsString>) -> Result<(), AppError> {
     let params = setup::get_params(cli_pars, &config_string)?;
     let flags = params.flags;
     setup::establish_log(&params)?;
-    let pool = setup::get_db_pool().await?;
-            
-            
-    if flags.process_mdr_data {
+
+    let _pool1 = setup::get_db_pool("db1").await?;
+    let _pool2 = setup::get_db_pool("db2").await?;
+    let _pool3 = setup::get_db_pool("db3").await?;
+    let _cxt_pool = setup::get_db_pool("cxt").await?;
+    let _mon_pool = setup::get_db_pool("mon").await?;     
+          
+
+    if flags.download_recent {
        //mdr::do_mdr_import(&params.data_date, &pool).await?;
     }
-     
-    if flags.process_iec_data {
-        iec::do_iec_import(&pool).await?;
+
+
+    if flags.download_set {
+       //mdr::do_mdr_import(&params.data_date, &pool).await?;
     }
 
-    if flags.code_data {
-        encode::do_data_encoding(&pool).await?;
+
+    if flags.download_year {
+       //mdr::do_mdr_import(&params.data_date, &pool).await?;
     }
+
+
+
+    //if flags.code_data {
+        //encode::do_data_encoding(&pool).await?;
+    //}
 
 
 

@@ -9,7 +9,7 @@ path = "src/lib.rs"
 
 [[bin]]
 path = "src/main.rs"
-name = "dl_aact"
+name = "dl_ctg"
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
