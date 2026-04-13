@@ -15,6 +15,7 @@
  pub struct TomlFolderPars {
     pub log_folder_path: Option<String>,
     pub json_files_path: Option<String>,
+    pub source_data_path: Option<String>,
  }
  
  #[derive(Debug, Deserialize)]
@@ -39,6 +40,7 @@
  pub struct FolderPars {
     pub log_folder_path: PathBuf,
     pub json_files_path: PathBuf,
+    pub source_data_path: PathBuf,
  }
  
  #[derive(Debug, Clone)]
@@ -92,11 +94,13 @@
  fn verify_folder_parameters(toml_folders: TomlFolderPars) -> Result<FolderPars, AppError> {
  
      let log_folder_string = check_essential_string (toml_folders.log_folder_path, "log folder", "log_folder_path")?;
-     let json_files_string = check_essential_string (toml_folders.json_files_path, "json files older", "json_files_path")?;
-  
+     let json_files_string = check_essential_string (toml_folders.json_files_path, "json files folder", "json_files_path")?;
+     let source_data_string = check_defaulted_string (toml_folders.source_data_path, "source data folder", "");
+
      Ok(FolderPars {
          log_folder_path: PathBuf::from(log_folder_string),
          json_files_path: PathBuf::from(json_files_string),
+         source_data_path: PathBuf::from(source_data_string),
      })
  }
  
@@ -171,6 +175,7 @@
      }
  }
   
+
  pub fn fetch_db_name(db: &str) -> Result<String, AppError> {
      let db_pars = match DB_PARS.get() {
           Some(dbp) => dbp,
@@ -218,6 +223,7 @@
 [folders]
 log_folder_path="/home/steve/Data/MDR logs/ctg/"
 json_files_path="/home/steve/Data/MDR json files/ctg/"
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20260410/"
 
 [database]
 db_host="localhost"
@@ -236,6 +242,7 @@ cxt_db_name="cxt"
 
          assert_eq!(res.folders.log_folder_path, PathBuf::from("/home/steve/Data/MDR logs/ctg/"));
          assert_eq!(res.folders.json_files_path, PathBuf::from("/home/steve/Data/MDR json files/ctg/"));
+         assert_eq!(res.folders.source_data_path, PathBuf::from("/home/steve/Data/MDR source data/CTGDumps/20260410/"));
 
          assert_eq!(res.db_pars.db_host, "localhost");
          assert_eq!(res.db_pars.db_user, "user_name");
@@ -258,6 +265,7 @@ cxt_db_name="cxt"
 [folders]
 log_folder_path=""
 json_files_path="/home/steve/Data/MDR json files/ctg/"
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20260410/"
 
 [database]
 db_host="localhost"
@@ -285,6 +293,7 @@ cxt_db_name="cxt"
 [folders]
 log_folder_path="/home/steve/Data/MDR logs/ctg/"
 json_files_path=""
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20260410/"
 
 [database]
 db_host="localhost"
@@ -312,6 +321,7 @@ cxt_db_name="cxt"
 [folders]
 log_folder_path="/home/steve/Data/MDR logs/ctg/"
 json_files_path="/home/steve/Data/MDR json files/ctg/"
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20260410/"
 
 [database]
 db_host="localhost"
@@ -338,6 +348,7 @@ cxt_db_name="cxt"
 [folders]
 log_folder_path="/home/steve/Data/MDR logs/ctg/"
 json_files_path="/home/steve/Data/MDR json files/ctg/"
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20260410/"
 
 [database]
 db_host=""
@@ -373,6 +384,7 @@ cxt_db_name=""
 [folders]
 log_folder_path="/home/steve/Data/MDR logs/ctg/"
 json_files_path="/home/steve/Data/MDR json files/ctg/"
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20260410/"
 
 [database]
 db_host="localhost"

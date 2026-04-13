@@ -1,11 +1,14 @@
-
+pub mod base_types;
+pub mod err;
 pub mod setup;
 pub mod iec;
 pub mod encode;
 pub mod download;
 pub mod import;
-pub mod err;
+pub mod data_models;
 
+use download::monitoring::{get_next_download_id, update_dl_event_record};
+use crate::base_types::{DownloadType, ImportType, EncodingType};
 use setup::cli_reader;
 use err::AppError;
 use std::ffi::OsString;
@@ -22,39 +25,63 @@ pub async fn run(args: Vec<OsString>) -> Result<(), AppError> {
                                 .map_err(|e| AppError::IoReadErrorWithPath(e, config_file))?;
                               
     let params = setup::get_params(cli_pars, &config_string)?;
-    let flags = params.flags;
+
     setup::establish_log(&params)?;
 
     let _pool1 = setup::get_db_pool("db1").await?;
     let _pool2 = setup::get_db_pool("db2").await?;
     let _pool3 = setup::get_db_pool("db3").await?;
-    let _cxt_pool = setup::get_db_pool("cxt").await?;
-    let _mon_pool = setup::get_db_pool("mon").await?;     
+    //let _cxt_pool = setup::get_db_pool("cxt").await?;
+    let mon_pool = setup::get_db_pool("mon").await?;     
           
 
-    if flags.download_recent {
-       //mdr::do_mdr_import(&params.data_date, &pool).await?;
+    if params.download_type != DownloadType::None {
+
+        let dl_id = get_next_download_id(100120, &params.download_type, &mon_pool).await?;
+        if params.download_type == DownloadType::Recent {
+        
+        }
+
+        if params.download_type == DownloadType::BetweenDates{
+        
+        }
+
+        if params.download_type == DownloadType::ByYear {
+            
+            let dl_res = download::do_year_download(&params.source_data_path, &params.start_date).await?;
+            //update_dl_event_record (dl_id, dl_res, &params, &mon_pool).await?;
+        }
+        
+    
     }
 
 
-    if flags.download_set {
-       //mdr::do_mdr_import(&params.data_date, &pool).await?;
+    if params.import_type != ImportType::None {
+
+        if params.import_type == ImportType::Recent {
+        
+        }
+
+        if params.import_type == ImportType::BetweenDates {
+        
+        }
     }
 
 
-    if flags.download_year {
-       //mdr::do_mdr_import(&params.data_date, &pool).await?;
+    if params.encoding_type != EncodingType::None {
+
+         if params.encoding_type == EncodingType::Recent {
+        
+        }
+
+        if params.encoding_type == EncodingType::All {
+        
+        }
+
     }
-
-
-
-    //if flags.code_data {
-        //encode::do_data_encoding(&pool).await?;
-    //}
-
-
 
     Ok(())  
+
 }
 
 

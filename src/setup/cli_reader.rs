@@ -39,27 +39,20 @@ inclusively, while the third, ctgc, covers studies first posted from
   
  use clap::{command, Arg, ArgMatches};
  use crate::err::AppError;
+ use crate::base_types::{DownloadType, ImportType, EncodingType};
  use std::ffi::OsString;
  use chrono::{NaiveDate, Utc, Datelike};
  
  pub struct CliPars {
+    pub download_type: DownloadType,
+    pub import_type: ImportType,
+    pub encoding_type: EncodingType,
     pub start_date: Option<String>,
     pub end_date: Option<String>,
-    pub flags: Flags, 
- }
- 
- #[derive(Debug, Clone, Copy)]
- pub struct Flags {
-    pub download_recent: bool,
-    pub download_set: bool,
-    pub download_year: bool,
-    pub process_recent: bool,
-    pub process_set: bool,
-    pub code_uncoded: bool,
-    pub code_all: bool,
     pub is_test: bool,
  }
  
+
  pub fn fetch_valid_arguments(args: Vec<OsString>) -> Result<CliPars, AppError>
  { 
     let parse_result = parse_args(args)?;
@@ -76,7 +69,7 @@ inclusively, while the third, ctgc, covers studies first posted from
     let m_flag = parse_result.get_flag("m_flag");
     let y_flag = parse_result.get_flag("y_flag");
     let mut p_flag = parse_result.get_flag("p_flag");
-    let q_flag = parse_result.get_flag("q_flag");
+    let mut q_flag = parse_result.get_flag("q_flag");
     let mut c_flag = parse_result.get_flag("c_flag");
     let f_flag = parse_result.get_flag("f_flag");
     let z_flag = parse_result.get_flag("z_flag");
@@ -86,61 +79,108 @@ inclusively, while the third, ctgc, covers studies first posted from
        p_flag = true;
        c_flag = true;
     }
+       
+    let mut download_type = DownloadType::None;
+    let mut import_type = ImportType::None;
+    let mut encoding_type = EncodingType::None;
 
-    if r_flag {
-        match NaiveDate::parse_from_str(start_date, "%Y-%m-%d") {
-            Ok(d) => d,
-            Err(_) => return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
-                    format!("Cannot find a valid value for cut-off date (given as {}).", start_date))),
-        };
-    }
+    if r_flag || m_flag || y_flag {
 
-    if y_flag {
-        match start_date.parse::<i32>() {
-            Ok(d) => {
-                let this_year = Utc::now().year();
-                if d < 1999 || d > this_year {
-                    return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
-                    format!("Cannot find a valid value for year (given as {}).", start_date)));
-                }
-            },
-            Err(_) => return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
-                    format!("Cannot find a valid value for year (given as {}).", start_date))),
-        };
-    }
+        // The three options have different -d parameter types
+        // Only one will work for each, so having more than one of r, m and y
+        // will result in an error from the non -d supported flag(s).
+        // Therefore only one can be used and no need to check for 
+        // multiple download flags.
 
-    if m_flag || q_flag {
+        if r_flag {
+            match NaiveDate::parse_from_str(start_date, "%Y-%m-%d") {
+                Ok(d) => d,
+                Err(_) => return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
+                        format!("Cannot find a valid value for cut-off date (given as {}).", start_date))),
+            };
+            download_type = DownloadType::Recent;
+        }
+
+        if m_flag {
         
-        if !check_year_month(start_date) {
-            return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
-            format!("Cannot find a valid value for start year-month (given as {}).", start_date)));
+            if !check_year_month(start_date) {
+                return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
+                format!("Cannot find a valid value for start year-month (given as {}).", start_date)));
+            }
+
+            if !check_year_month(end_date) {
+                return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
+                format!("Cannot find a valid value for end year-month (given as {}).", end_date)));
+            }
+            download_type = DownloadType::BetweenDates;
         }
 
-        if !check_year_month(end_date) {
-            return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
-            format!("Cannot find a valid value for end year-month (given as {}).", end_date)));
+        if y_flag {
+            match start_date.parse::<i32>() {
+                Ok(d) => {
+                    let this_year = Utc::now().year();
+                    if d < 1999 || d > this_year {
+                        return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
+                        format!("Cannot find a valid value for year (given as {}).", start_date)));
+                    }
+                },
+                Err(_) => return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
+                        format!("Cannot find a valid value for year (given as {}).", start_date))),
+            };
+            download_type = DownloadType::ByYear;
         }
+
     }
 
-    if c_flag && f_flag {
-        c_flag = false;  // if both do code all
+
+    if p_flag || q_flag {
+
+        if p_flag && q_flag {
+            q_flag = false;  // if both do process recent
+        }
+
+        if p_flag {
+             import_type = ImportType::Recent;
+        }
+
+        if q_flag {
+        
+            if !check_year_month(start_date) {
+                return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
+                format!("Cannot find a valid value for start year-month (given as {}).", start_date)));
+            }
+
+            if !check_year_month(end_date) {
+                return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
+                format!("Cannot find a valid value for end year-month (given as {}).", end_date)));
+            }
+            import_type = ImportType::BetweenDates;
+
+        }
+
     }
-     
-    let flags = Flags {
-        download_recent: r_flag,
-        download_set: m_flag,
-        download_year: y_flag,
-        process_recent: p_flag,
-        process_set: q_flag,
-        code_uncoded: c_flag,
-        code_all: f_flag,
-        is_test: z_flag,
-    };
+
+    if c_flag || f_flag {
+
+        if c_flag && f_flag {
+            c_flag = false;  // if both do code all
+        }
+
+        if c_flag {
+            encoding_type = EncodingType::Recent;
+        }
+        else {
+            encoding_type = EncodingType::All;
+        }
+    }
  
     Ok(CliPars {
+        download_type: download_type,
+        import_type: import_type,
+        encoding_type: encoding_type,
         start_date: if start_date.trim() == "" {None} else {Some(start_date.clone())},
         end_date: if end_date.trim() == "" {None} else {Some(end_date.clone())},
-        flags: flags,
+        is_test: z_flag,
     })
  
  }
@@ -308,6 +348,17 @@ inclusively, while the third, ctgc, covers studies first posted from
          assert_eq!(res.flags.code_all, false);           
          assert_eq!(res.flags.is_test, false);
      }
+
+
+     #[test]
+     #[should_panic]
+     fn check_cli_with_r_flag_and_invalid_date() {
+         let target = "dummy target";
+         let args : Vec<&str> = vec![target, "-r", "-d", "2024-02-31"];
+         let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
+ 
+         let _res = fetch_valid_arguments(test_args).unwrap();
+     }
  
      #[test]
      fn check_cli_with_a_flag_and_date() {
@@ -347,6 +398,26 @@ inclusively, while the third, ctgc, covers studies first posted from
          assert_eq!(res.flags.code_all, false);           
          assert_eq!(res.flags.is_test, false);
      }
+
+     #[test]
+     #[should_panic]
+     fn check_cli_with_m_flag_and_invalid_start_date() {
+         let target = "dummy target";
+         let args : Vec<&str> = vec![target, "-m", "-d", "1924-11", "-e", "2025-06"];
+         let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
+ 
+         let _res = fetch_valid_arguments(test_args).unwrap();
+     }
+
+     #[test]
+     #[should_panic]
+     fn check_cli_with_m_flag_and_invalid_endt_date() {
+         let target = "dummy target";
+         let args : Vec<&str> = vec![target, "-m", "-d", "2024-11", "-e", "2025-00"];
+         let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
+ 
+         let _res = fetch_valid_arguments(test_args).unwrap();
+     }
        
     
      #[test]
@@ -366,6 +437,17 @@ inclusively, while the third, ctgc, covers studies first posted from
          assert_eq!(res.flags.code_uncoded, false);
          assert_eq!(res.flags.code_all, false);           
          assert_eq!(res.flags.is_test, false);
+     }
+
+
+     #[test]
+     #[should_panic]
+     fn check_cli_with_y_flag_and_invalid_date() {
+         let target = "dummy target";
+         let args : Vec<&str> = vec![target, "-y", "-d", "2034"];
+         let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
+ 
+         let _res = fetch_valid_arguments(test_args).unwrap();
      }
 
 

@@ -3,23 +3,15 @@ pub mod log_helper;
 pub mod cli_reader;
 
 use crate::err::AppError;
+use crate::base_types::{InitParams, DownloadType};
 use sqlx::postgres::{PgPoolOptions, PgConnectOptions, PgPool};
 use std::path::PathBuf;
-use cli_reader::{CliPars, Flags};
+use cli_reader::CliPars;
 use std::fs;
 use std::time::Duration;
 use sqlx::ConnectOptions;
 use config_reader::Config;
 use std::sync::OnceLock;
-//use chrono::NaiveDate;
-
-pub struct InitParams {
-    pub log_folder_path: PathBuf,
-    pub json_files_path: PathBuf,
-    pub start_date: Option<String>,
-    pub end_date: Option<String>,
-    pub flags: Flags,
-}
 
 pub static LOG_RUNNING: OnceLock<bool> = OnceLock::new();
 
@@ -42,6 +34,14 @@ pub fn get_params(cli_pars: CliPars, config_string: &String) -> Result<InitParam
     if !folder_exists (&log_folder) { 
         fs::create_dir_all(&json_folder)?;
     }
+
+    let source_folder= config_file.folders.source_data_path;  
+    if cli_pars.download_type == DownloadType::ByYear {
+        if !folder_exists (&source_folder) { 
+            return Result::Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
+                    format!("Cannot find a vaslid folder for {} ({}).", "source data folder", source_folder.display())));
+        }
+    }
    
    
     // For execution flags read from the environment variables
@@ -49,9 +49,13 @@ pub fn get_params(cli_pars: CliPars, config_string: &String) -> Result<InitParam
     Ok(InitParams {
         log_folder_path: log_folder,
         json_files_path: json_folder,
+        source_data_path: source_folder,
+        download_type: cli_pars.download_type,
+        import_type: cli_pars.import_type,
+        encoding_type: cli_pars.encoding_type,
         start_date: cli_pars.start_date,
         end_date: cli_pars.end_date,
-        flags: cli_pars.flags,
+        is_test:cli_pars.is_test,
     })
 
 }
@@ -125,6 +129,7 @@ mod tests {
 [folders]
 log_folder_path="/home/steve/Data/MDR logs/ctg/"
 json_files_path="/home/steve/Data/MDR json files/ctg/"
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20260410/"
 
 [database]
 db_host="localhost"
@@ -145,22 +150,99 @@ cxt_db_name="cxt"
 
         let res = get_params(cli_pars, &config_string).unwrap();
 
-         assert_eq!(res.log_folder_path, PathBuf::from("/home/steve/Data/MDR logs/ctg/"));
-         assert_eq!(res.json_files_path, PathBuf::from("/home/steve/Data/MDR json files/ctg/"));
+        assert_eq!(res.log_folder_path, PathBuf::from("/home/steve/Data/MDR logs/ctg/"));
+        assert_eq!(res.json_files_path, PathBuf::from("/home/steve/Data/MDR json files/ctg/"));
+        assert_eq!(res.source_data_path, PathBuf::from("/home/steve/Data/MDR source data/CTGDumps/20260410/"));
 
-         assert_eq!(res.start_date, Some("2025-03-03".to_string()));
-         assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, true);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, true);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, true);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, false);
+        assert_eq!(res.start_date, Some("2025-03-03".to_string()));
+        assert_eq!(res.end_date, None);
+        assert_eq!(res.flags.download_recent, true);
+        assert_eq!(res.flags.download_set, false);
+        assert_eq!(res.flags.download_year, false);
+        assert_eq!(res.flags.process_recent, true);
+        assert_eq!(res.flags.process_set, false);   
+        assert_eq!(res.flags.code_uncoded, true);
+        assert_eq!(res.flags.code_all, false);           
+        assert_eq!(res.flags.is_test, false);
 
     }
    
+
+    #[test]
+    fn check_y_flag_with_source_data_path() {
+         let config = r#"
+[folders]
+log_folder_path="/home/steve/Data/MDR logs/ctg/"
+json_files_path="/home/steve/Data/MDR json files/ctg/"
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20260410/"
+
+[database]
+db_host="localhost"
+db_user="user_name"
+db_password="password"
+db_port="5432"
+
+db1_name="ctg1"
+db2_name="ctg2"
+db3_name="ctg3"
+mon_db_name="mon"
+cxt_db_name="cxt"
+ "#;
+        let config_string = config.to_string();
+        let args : Vec<&str> = vec!["dummy target", "-y", "-d", "2025"];
+        let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
+        let cli_pars = cli_reader::fetch_valid_arguments(test_args).unwrap();
+
+        let res = get_params(cli_pars, &config_string).unwrap();
+
+        assert_eq!(res.log_folder_path, PathBuf::from("/home/steve/Data/MDR logs/ctg/"));
+        assert_eq!(res.json_files_path, PathBuf::from("/home/steve/Data/MDR json files/ctg/"));
+        assert_eq!(res.source_data_path, PathBuf::from("/home/steve/Data/MDR source data/CTGDumps/20260410/"));
+
+        assert_eq!(res.start_date, Some("2025".to_string()));
+        assert_eq!(res.end_date, None);
+        assert_eq!(res.flags.download_recent, false);
+        assert_eq!(res.flags.download_set, false);
+        assert_eq!(res.flags.download_year, true);
+        assert_eq!(res.flags.process_recent, false);
+        assert_eq!(res.flags.process_set, false);   
+        assert_eq!(res.flags.code_uncoded, false);
+        assert_eq!(res.flags.code_all, false);           
+        assert_eq!(res.flags.is_test, false);
+
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn check_y_flag_with_invalid_source_data_path() {
+         let config = r#"
+[folders]
+log_folder_path="/home/steve/Data/MDR logs/ctg/"
+json_files_path="/home/steve/Data/MDR json files/ctg/"
+source_data_path="/home/steve/Data/MDR source data/CTGDumps/20230410/"
+
+[database]
+db_host="localhost"
+db_user="user_name"
+db_password="password"
+db_port="5432"
+
+db1_name="ctg1"
+db2_name="ctg2"
+db3_name="ctg3"
+mon_db_name="mon"
+cxt_db_name="cxt"
+ "#;
+        let config_string = config.to_string();
+        let args : Vec<&str> = vec!["dummy target", "-y", "-d", "2025"];
+        let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
+        let cli_pars = cli_reader::fetch_valid_arguments(test_args).unwrap();
+
+        let _res = get_params(cli_pars, &config_string).unwrap();
+
+    }
+
 }
 
  
