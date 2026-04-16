@@ -5,10 +5,12 @@ a) Using the APi to obtain the study data updated on or after
 a set cut-off date (flag r, string d as an ISO date).
 b) Using the API to get data related to all studies first posted 
 in a set of consecutive months (flag m, strings d and e as year-months).
-c) By manually downloading data on a year-by-year basis, as json files
-(flag y, string d as a four digit year).
+c) By manually downloading all data and then processing the raw CTG
+json files folder by folder. Each folder as a two digit name referring
+to the last two digits of the NCT IDs of the files within it, 
+(flag y, string d as a two digit year).
 In all cases a 'd' string is required, as a full or partiaL date in 
-ISO format.   
+ISO format, or as two digits.  
 In all cases the ingested data is simplified to to fit the MDR's 
 own json structure, and stored in the relevant json file folders,
 with one folder for each month-year.
@@ -67,7 +69,7 @@ inclusively, while the third, ctgc, covers studies first posted from
     let a_flag = parse_result.get_flag("a_flag");
     let mut r_flag = parse_result.get_flag("r_flag");
     let m_flag = parse_result.get_flag("m_flag");
-    let y_flag = parse_result.get_flag("y_flag");
+    let mut dl_all_flag = parse_result.get_flag("dl_all_flag");
     let mut p_flag = parse_result.get_flag("p_flag");
     let mut q_flag = parse_result.get_flag("q_flag");
     let mut c_flag = parse_result.get_flag("c_flag");
@@ -84,13 +86,27 @@ inclusively, while the third, ctgc, covers studies first posted from
     let mut import_type = ImportType::None;
     let mut encoding_type = EncodingType::None;
 
-    if r_flag || m_flag || y_flag {
+    if dl_all_flag {
 
-        // The three options have different -d parameter types
-        // Only one will work for each, so having more than one of r, m and y
-        // will result in an error from the non -d supported flag(s).
-        // Therefore only one can be used and no need to check for 
-        // multiple download flags.
+        if dl_all_flag && r_flag {
+            dl_all_flag = false;  // if both do not do the download all
+        }
+
+        if dl_all_flag && m_flag {
+            dl_all_flag = false;  // if both do not do the download all
+        }
+
+        if dl_all_flag {   // still
+            download_type = DownloadType::AllFromFolders;   // no other parameters required
+        }
+    }
+
+
+    if r_flag || m_flag {
+        // The two options have different -d parameter types
+        // Only one will work for each, so having more than r and m
+        // will result in an error from the non supported -d flag(s).
+        // Therefore only one can be used.
 
         if r_flag {
             match NaiveDate::parse_from_str(start_date, "%Y-%m-%d") {
@@ -113,21 +129,6 @@ inclusively, while the third, ctgc, covers studies first posted from
                 format!("Cannot find a valid value for end year-month (given as {}).", end_date)));
             }
             download_type = DownloadType::BetweenDates;
-        }
-
-        if y_flag {
-            match start_date.parse::<i32>() {
-                Ok(d) => {
-                    let this_year = Utc::now().year();
-                    if d < 1999 || d > this_year {
-                        return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
-                        format!("Cannot find a valid value for year (given as {}).", start_date)));
-                    }
-                },
-                Err(_) => return Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
-                        format!("Cannot find a valid value for year (given as {}).", start_date))),
-            };
-            download_type = DownloadType::ByYear;
         }
 
     }
@@ -248,11 +249,11 @@ inclusively, while the third, ctgc, covers studies first posted from
             .action(clap::ArgAction::SetTrue)
         )
         .arg(
-            Arg::new("y_flag")
-            .short('y')
-            .long("year")
+            Arg::new("dl_all_flag")
+            .short('A')
+            .long("dlall")
             .required(false)
-            .help("A flag signifying download data from a folder with a year's raw ctg data")
+            .help("A flag signifying download all data using CGT raw data folders")
             .action(clap::ArgAction::SetTrue)
         )
         .arg(
@@ -339,14 +340,10 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, Some("2024-11-23".to_string()));
          assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, true);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, false);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, false);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::Recent);
+         assert_eq!(res.import_type, ImportType::None);
+         assert_eq!(res.encoding_type, EncodingType::None);           
+         assert_eq!(res.is_test, false);
      }
 
 
@@ -369,14 +366,10 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, Some("2024-11-23".to_string()));
          assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, true);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, true);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, true);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::Recent);
+         assert_eq!(res.import_type, ImportType::Recent);
+         assert_eq!(res.encoding_type, EncodingType::Recent);        
+         assert_eq!(res.is_test, false);
      }
  
  
@@ -389,14 +382,10 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, Some("2024-11".to_string()));
          assert_eq!(res.end_date, Some("2025-06".to_string()));
-         assert_eq!(res.flags.download_recent, false);
-         assert_eq!(res.flags.download_set, true);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, false);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, false);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::BetweenDates);
+         assert_eq!(res.import_type, ImportType::None);
+         assert_eq!(res.encoding_type, EncodingType::None);             
+         assert_eq!(res.is_test, false);
      }
 
      #[test]
@@ -411,9 +400,9 @@ inclusively, while the third, ctgc, covers studies first posted from
 
      #[test]
      #[should_panic]
-     fn check_cli_with_m_flag_and_invalid_endt_date() {
+     fn check_cli_with_q_flag_and_invalid_endt_date() {
          let target = "dummy target";
-         let args : Vec<&str> = vec![target, "-m", "-d", "2024-11", "-e", "2025-00"];
+         let args : Vec<&str> = vec![target, "-q", "-d", "2024-11", "-e", "2025-00"];
          let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
  
          let _res = fetch_valid_arguments(test_args).unwrap();
@@ -421,34 +410,20 @@ inclusively, while the third, ctgc, covers studies first posted from
        
     
      #[test]
-     fn check_cli_with_y_flag_and_date() {
+     fn check_cli_with_dl_all_flag_and_date() {
          let target = "dummy target";
-         let args : Vec<&str> = vec![target, "-y", "-d", "2024"];
+         let args : Vec<&str> = vec![target, "-A"];
          let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
  
          let res = fetch_valid_arguments(test_args).unwrap();
-         assert_eq!(res.start_date, Some("2024".to_string()));
+         assert_eq!(res.start_date, None);
          assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, false);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, true);
-         assert_eq!(res.flags.process_recent, false);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, false);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::AllFromFolders);
+         assert_eq!(res.import_type, ImportType::None);
+         assert_eq!(res.encoding_type, EncodingType::None);             
+         assert_eq!(res.is_test, false);
      }
 
-
-     #[test]
-     #[should_panic]
-     fn check_cli_with_y_flag_and_invalid_date() {
-         let target = "dummy target";
-         let args : Vec<&str> = vec![target, "-y", "-d", "2034"];
-         let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
- 
-         let _res = fetch_valid_arguments(test_args).unwrap();
-     }
 
 
      #[test]
@@ -460,14 +435,10 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, None);
          assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, false);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, true);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, false);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::None);
+         assert_eq!(res.import_type, ImportType::Recent);
+         assert_eq!(res.encoding_type, EncodingType::None);             
+         assert_eq!(res.is_test, false);
      }
 
 
@@ -481,14 +452,10 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, Some("2024-11".to_string()));
          assert_eq!(res.end_date, Some("2025-06".to_string()));
-         assert_eq!(res.flags.download_recent, false);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, false);
-         assert_eq!(res.flags.process_set, true);   
-         assert_eq!(res.flags.code_uncoded, false);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::None);
+         assert_eq!(res.import_type, ImportType::BetweenDates);
+         assert_eq!(res.encoding_type, EncodingType::None);             
+         assert_eq!(res.is_test, false);
      }
 
 
@@ -501,14 +468,10 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, None);
          assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, false);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, false);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, true);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::None);
+         assert_eq!(res.import_type, ImportType::None);
+         assert_eq!(res.encoding_type, EncodingType::Recent);             
+         assert_eq!(res.is_test, false);
      }
 
 
@@ -521,14 +484,10 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, None);
          assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, false);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, false);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, false);
-         assert_eq!(res.flags.code_all, true);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::None);
+         assert_eq!(res.import_type, ImportType::None);
+         assert_eq!(res.encoding_type, EncodingType::All);             
+         assert_eq!(res.is_test, false);
      }
 
 
@@ -541,18 +500,14 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, None);
          assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, false);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, false);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, false);
-         assert_eq!(res.flags.code_all, true);           
-         assert_eq!(res.flags.is_test, false);
+         assert_eq!(res.download_type, DownloadType::None);
+         assert_eq!(res.import_type, ImportType::None);
+         assert_eq!(res.encoding_type, EncodingType::All);             
+         assert_eq!(res.is_test, false);
      }
 
 
-          #[test]
+     #[test]
      fn check_cli_with_c_and_z_flag() {
          let target = "dummy target";
          let args : Vec<&str> = vec![target, "-c", "-z"];
@@ -561,18 +516,12 @@ inclusively, while the third, ctgc, covers studies first posted from
          let res = fetch_valid_arguments(test_args).unwrap();
          assert_eq!(res.start_date, None);
          assert_eq!(res.end_date, None);
-         assert_eq!(res.flags.download_recent, false);
-         assert_eq!(res.flags.download_set, false);
-         assert_eq!(res.flags.download_year, false);
-         assert_eq!(res.flags.process_recent, false);
-         assert_eq!(res.flags.process_set, false);   
-         assert_eq!(res.flags.code_uncoded, true);
-         assert_eq!(res.flags.code_all, false);           
-         assert_eq!(res.flags.is_test, true);
+         assert_eq!(res.download_type, DownloadType::None);
+         assert_eq!(res.import_type, ImportType::None);
+         assert_eq!(res.encoding_type, EncodingType::Recent);          
+         assert_eq!(res.is_test, true);
      }
 
-
-
- }
+}
  
  

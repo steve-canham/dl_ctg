@@ -5,15 +5,20 @@ use sqlx::{Pool, Postgres};
 use std::path::PathBuf;
 use chrono::Utc;
 
+pub async fn update_ctg_mon(sid: &String, rec_created: &String, rec_last_revised: &Option<String>, dl_id: i32, 
+                post_year: &String, post_month: &String, full_path: &PathBuf, src_pool: &Pool<Postgres>) -> Result<bool, AppError> {
 
-pub async fn update_ctg_mon(sd_sid: &String, remote_url: &String, dl_id: i32,
-                     record_date: &Option<String>, full_path: &PathBuf, src_pool: &Pool<Postgres>) -> Result<bool, AppError> {
+        let sd_sid = sid.to_string();        
+        let remote_url = format!("https://clinicaltrials.gov/study/{}", &sid);
+        let local_subfolder = format!("{}/{}", post_year, post_month);
+        let local_full_path = full_path.display().to_string();
+        let last_dl_id = dl_id;
+        let last_downloaded = Utc::now();
+        let record_last_revised = rec_last_revised.to_owned();
 
         let mut added = false;          // indicates if will be a new record or update of an existing one
-        let now = Utc::now();
-        let local_path = full_path.to_str().unwrap();  // assumes utf-8 characters
-        
-        let sql = format!("SELECT EXISTS(SELECT 1 from mn.source_data where sd_sid = '{}')", sd_sid); 
+               
+        let sql = format!("SELECT EXISTS(SELECT 1 from mn.source_data where sd_sid = '{}')", &sd_sid); 
         let mon_record_exists = sqlx::query_scalar(&sql).fetch_one(src_pool).await
                         .map_err(|e| AppError::SqlxError(e, sql))?;
 
@@ -21,21 +26,24 @@ pub async fn update_ctg_mon(sd_sid: &String, remote_url: &String, dl_id: i32,
             
             let sql = r#"Update mn.source_data set 
                         remote_url = $2,
-                        last_revised = $3::timestamp,
-                        local_path = $4,
-                        last_dl_id = $5,
-                        last_downloaded = $6
+                        record_created = $3::date,
+                        record_last_revised = $4::date,
+                        local_subfolder = $5,
+                        local_full_path = $6,
+                        last_dl_id = $7,
+                        last_downloaded = $8
                         where sd_sid = $1;"#;
-            sqlx::query(&sql).bind(sd_sid).bind(remote_url).bind(record_date)    
-            .bind(local_path).bind(dl_id).bind(now).execute(src_pool).await
-                    .map_err(|e| AppError::SqlxError(e, sql.to_string()))?;       
+            sqlx::query(&sql).bind(sd_sid).bind(remote_url).bind(rec_created.to_string()).bind(record_last_revised)    
+            .bind(local_subfolder).bind(local_full_path).bind(last_dl_id).bind(last_downloaded).execute(src_pool).await
+                    .map_err(|e| AppError::SqlxError(e, sql.to_string()))?;  
         }
         else {   // Create as a new record.
             
-            let sql = r#"Insert into mn.source_data(sd_sid, remote_url, last_revised,
-	                    local_path, last_dl_id, last_downloaded) values ($1, $2, $3::timestamp, $4, $5, $6)"#;
-            sqlx::query(&sql).bind(sd_sid).bind(remote_url).bind(record_date)    
-            .bind(local_path).bind(dl_id).bind(now).execute(src_pool).await
+            let sql = r#"Insert into mn.source_data(sd_sid, remote_url, record_created, record_last_revised,
+	                    local_subfolder, local_full_path, last_dl_id, last_downloaded) 
+                        values ($1, $2, $3::date, $4::date, $5, $6, $7, $8)"#;
+            sqlx::query(&sql).bind(sd_sid).bind(remote_url).bind(rec_created.to_string()).bind(record_last_revised)    
+            .bind(local_subfolder).bind(local_full_path).bind(last_dl_id).bind(last_downloaded).execute(src_pool).await
                     .map_err(|e| AppError::SqlxError(e, sql.to_string()))?;     
             added = true;  
         }
@@ -71,8 +79,8 @@ pub async fn update_dl_event_record (dl_id: i32, dl_res: DownloadResult, params:
              num_records_checked = $3,
              num_records_downloaded = $4,
              num_records_added = $5,
-             start_date = $6,
-             end_date = $7,
+             par1 = $6,
+             par2 = $7,
              filefolder_path = $8
              where id = $1"#;
     let res = sqlx::query(sql).bind(dl_id).bind(now)

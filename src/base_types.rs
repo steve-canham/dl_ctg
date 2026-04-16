@@ -20,21 +20,20 @@ pub struct InitParams {
 pub enum DownloadType {
     Recent,
     BetweenDates,
-    ByYear,
+    AllFromFolders,
     None
 }
 
 impl DownloadType {
     pub fn to_string(&self) -> String {
         match self { 
-            DownloadType::Recent => "Recently updated".to_string(), 
-            DownloadType::BetweenDates => "Created between dates".to_string(), 
-            DownloadType::ByYear => "Created in year".to_string(), 
+            DownloadType::Recent => "Data recently updated".to_string(), 
+            DownloadType::BetweenDates => "Data from studies created in specified months".to_string(), 
+            DownloadType::AllFromFolders => "All Data,from raw API data folders".to_string(), 
             DownloadType::None => "None".to_string(), 
         }
     }
 }
-
 
 #[derive(PartialEq, Debug)]
 pub enum ImportType {
@@ -47,12 +46,11 @@ impl ImportType {
     pub fn to_string(&self) -> String {
         match self { 
             ImportType::None => "None".to_string(), 
-            ImportType::Recent => "Recently downloaded".to_string(), 
-            ImportType::BetweenDates => "Created between Dates".to_string(), 
+            ImportType::Recent => "Data recently downloaded".to_string(), 
+            ImportType::BetweenDates => "Data from studies created in specified months".to_string(), 
         }
     }
 }
-
 
 
 #[derive(PartialEq, Debug)]
@@ -66,12 +64,11 @@ impl EncodingType {
     pub fn to_string(&self) -> String {
         match self { 
             EncodingType::None => "None".to_string(), 
-            EncodingType::Recent => "Uncoded data".to_string(), 
+            EncodingType::Recent => "Data currently uncoded".to_string(), 
             EncodingType::All => "All data".to_string(), 
         }
     }
 }
-
 
 #[derive(Clone)]
 pub struct DownloadResult {
@@ -101,7 +98,6 @@ impl Add for DownloadResult {
         }
     }
 }
-
 
 pub struct ImportResult {
     pub num_available: i64,

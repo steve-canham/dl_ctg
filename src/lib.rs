@@ -8,7 +8,7 @@ pub mod import;
 pub mod data_models;
 
 use download::monitoring::{get_next_download_id, update_dl_event_record};
-use crate::base_types::{DownloadType, ImportType, EncodingType};
+use crate::base_types::{DownloadResult, DownloadType, ImportType, EncodingType};
 use setup::cli_reader;
 use err::AppError;
 use std::ffi::OsString;
@@ -28,16 +28,12 @@ pub async fn run(args: Vec<OsString>) -> Result<(), AppError> {
 
     setup::establish_log(&params)?;
 
-    let _pool1 = setup::get_db_pool("db1").await?;
-    let _pool2 = setup::get_db_pool("db2").await?;
-    let _pool3 = setup::get_db_pool("db3").await?;
-    //let _cxt_pool = setup::get_db_pool("cxt").await?;
     let mon_pool = setup::get_db_pool("mon").await?;     
-          
 
     if params.download_type != DownloadType::None {
 
         let dl_id = get_next_download_id(100120, &params.download_type, &mon_pool).await?;
+        let mut dl_res = DownloadResult::new();
         if params.download_type == DownloadType::Recent {
         
         }
@@ -46,11 +42,12 @@ pub async fn run(args: Vec<OsString>) -> Result<(), AppError> {
         
         }
 
-        if params.download_type == DownloadType::ByYear {
+        if params.download_type == DownloadType::AllFromFolders {
+
+            dl_res = download::do_folder_download(dl_id, &params).await?;
             
-            let dl_res = download::do_year_download(&params.source_data_path, &params.start_date).await?;
-            //update_dl_event_record (dl_id, dl_res, &params, &mon_pool).await?;
         }
+        update_dl_event_record (dl_id, dl_res, &params, &mon_pool).await?;
         
     
     }

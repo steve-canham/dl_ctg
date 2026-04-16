@@ -16,7 +16,7 @@ They are therefore redundant but included in this table to make processing based
 The date of completion is a new addition. Though often present as an estimate rather than an actual date, (when present at all) it has been included 
 to allow additional data processing (e.g. looking at study lengths in different phases). 
 
-For each of the 4 date types there is a _date_type field indicating whethjer the date is actual ('a') or estimated ('e').
+For each of the 4 date types there is a _date_type field indicating whether the date is actual ('a') or estimated ('e').
 
 4) The study_type_id has its name simplified to type_id. The codes used for the different types have been slightly changed - see Changes to study type below.
 

@@ -6,7 +6,7 @@
  use chrono::Local;
  use std::path::PathBuf;
  use crate::err::AppError;
- use crate::base_types::{InitParams, DownloadType, ImportType, EncodingType};
+ use crate::base_types::InitParams;
  
  use log::{info, LevelFilter};
  use log4rs::{
@@ -67,37 +67,18 @@
      
      // Called at the end of set up to record the input parameters
  
-     info!("PROGRAM START");
-     info!("");
-     info!("************************************");
-     info!("");
-     info!("log folder: {}", ip.log_folder_path.display());
-     info!("json files folder: {}", ip.json_files_path.display());
-     info!("source data path: {}", ip.source_data_path.display());
+    info!("PROGRAM START");
+    info!("");
+    info!("************************************");
+    info!("");
+    info!("log folder: {}", ip.log_folder_path.display());
+    info!("json files folder: {}", ip.json_files_path.display());
+    info!("source data path: {}", ip.source_data_path.display());
+      
+    info!("download data: {:?}", ip.download_type.to_string());
+    info!("import data: {:?}", ip.import_type.to_string());
+    info!("encoding data: {:?}", ip.encoding_type.to_string());
 
-    
-   
-    let dl_type = match ip.download_type {
-        DownloadType::Recent => "Data recently updated",
-        DownloadType::BetweenDates => "Data from studies created between dates",
-        DownloadType::ByYear => "Data from studies created in a set year",
-        DownloadType::None => "None",
-    }; 
-    info!("download type: {:?}", dl_type);
-     
-    let imp_type = match ip.import_type {
-        ImportType::Recent => "Data recently downloaded",
-        ImportType::BetweenDates => "Data from studies created between dates",
-        ImportType::None => "None",
-    }; 
-    info!("import type: {:?}", imp_type);
-
-    let enc_type = match ip.encoding_type {
-        EncodingType::Recent => "Data currently uncoded",
-        EncodingType::All => "All data",
-        EncodingType::None => "None",
-    }; 
-    info!("encoding type: {:?}", enc_type);
     info!("start date {}", match &ip.start_date {Some(s) => s, None => "None"});
     info!("end date: {}", match &ip.end_date {Some(s) => s, None => "None"});
     info!("test run: {}", ip.is_test);

@@ -36,14 +36,13 @@ pub fn get_params(cli_pars: CliPars, config_string: &String) -> Result<InitParam
     }
 
     let source_folder= config_file.folders.source_data_path;  
-    if cli_pars.download_type == DownloadType::ByYear {
+    if cli_pars.download_type == DownloadType::AllFromFolders {
         if !folder_exists (&source_folder) { 
             return Result::Err(AppError::ConfigurationError("Essential configuration value missing or misspelt.".to_string(),
-                    format!("Cannot find a vaslid folder for {} ({}).", "source data folder", source_folder.display())));
+                    format!("Cannot find a valid folder for {} ({}).", "source data folder", source_folder.display())));
         }
     }
-   
-   
+      
     // For execution flags read from the environment variables
     
     Ok(InitParams {
@@ -62,8 +61,7 @@ pub fn get_params(cli_pars: CliPars, config_string: &String) -> Result<InitParam
 
 
 fn folder_exists(folder_name: &PathBuf) -> bool {
-    let xres = folder_name.try_exists();
-    let res = match xres {
+    let res = match folder_name.try_exists() {
         Ok(true) => true,
         Ok(false) => false, 
         Err(_e) => false,           
@@ -115,8 +113,10 @@ pub fn log_running() -> bool {
 // Tests
 #[cfg(test)]
 
+
 mod tests {
     use super::*;
+    use crate::base_types::{ImportType, EncodingType};
     use std::ffi::OsString;
   
     // No interaction between CLI and config file params
@@ -156,20 +156,16 @@ cxt_db_name="cxt"
 
         assert_eq!(res.start_date, Some("2025-03-03".to_string()));
         assert_eq!(res.end_date, None);
-        assert_eq!(res.flags.download_recent, true);
-        assert_eq!(res.flags.download_set, false);
-        assert_eq!(res.flags.download_year, false);
-        assert_eq!(res.flags.process_recent, true);
-        assert_eq!(res.flags.process_set, false);   
-        assert_eq!(res.flags.code_uncoded, true);
-        assert_eq!(res.flags.code_all, false);           
-        assert_eq!(res.flags.is_test, false);
+        assert_eq!(res.download_type, DownloadType::Recent);
+        assert_eq!(res.import_type, ImportType::Recent);
+        assert_eq!(res.encoding_type, EncodingType::Recent);        
+        assert_eq!(res.is_test, false);
 
     }
    
 
     #[test]
-    fn check_y_flag_with_source_data_path() {
+    fn check_dl_all_flag_with_source_data_path() {
          let config = r#"
 [folders]
 log_folder_path="/home/steve/Data/MDR logs/ctg/"
@@ -189,7 +185,7 @@ mon_db_name="mon"
 cxt_db_name="cxt"
  "#;
         let config_string = config.to_string();
-        let args : Vec<&str> = vec!["dummy target", "-y", "-d", "2025"];
+        let args : Vec<&str> = vec!["dummy target", "-A"];
         let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
         let cli_pars = cli_reader::fetch_valid_arguments(test_args).unwrap();
 
@@ -199,23 +195,18 @@ cxt_db_name="cxt"
         assert_eq!(res.json_files_path, PathBuf::from("/home/steve/Data/MDR json files/ctg/"));
         assert_eq!(res.source_data_path, PathBuf::from("/home/steve/Data/MDR source data/CTGDumps/20260410/"));
 
-        assert_eq!(res.start_date, Some("2025".to_string()));
+        assert_eq!(res.start_date, None);
         assert_eq!(res.end_date, None);
-        assert_eq!(res.flags.download_recent, false);
-        assert_eq!(res.flags.download_set, false);
-        assert_eq!(res.flags.download_year, true);
-        assert_eq!(res.flags.process_recent, false);
-        assert_eq!(res.flags.process_set, false);   
-        assert_eq!(res.flags.code_uncoded, false);
-        assert_eq!(res.flags.code_all, false);           
-        assert_eq!(res.flags.is_test, false);
-
+        assert_eq!(res.download_type, DownloadType::AllFromFolders);
+        assert_eq!(res.import_type, ImportType::None);
+        assert_eq!(res.encoding_type, EncodingType::None);             
+        assert_eq!(res.is_test, false);
     }
 
 
     #[test]
     #[should_panic]
-    fn check_y_flag_with_invalid_source_data_path() {
+    fn check_dl_all_flag_with_invalid_source_data_path() {
          let config = r#"
 [folders]
 log_folder_path="/home/steve/Data/MDR logs/ctg/"
@@ -235,7 +226,7 @@ mon_db_name="mon"
 cxt_db_name="cxt"
  "#;
         let config_string = config.to_string();
-        let args : Vec<&str> = vec!["dummy target", "-y", "-d", "2025"];
+        let args : Vec<&str> = vec!["dummy target", "-A"];
         let test_args = args.iter().map(|x| x.to_string().into()).collect::<Vec<OsString>>();
         let cli_pars = cli_reader::fetch_valid_arguments(test_args).unwrap();
 

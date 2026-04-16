@@ -108,6 +108,7 @@ pub struct StatusModule
     pub why_stopped: Option<String>,
     #[serde(rename = "expandedAccessInfo")]
     pub expanded_access_info: Option<ExpandedAccessInfo>,
+
     #[serde(rename = "startDateStruct")]
     pub start_date: Option<DateStruct>,
     #[serde(rename = "primaryCompletionDateStruct")]
@@ -115,7 +116,7 @@ pub struct StatusModule
     #[serde(rename = "completionDateStruct")]
     pub comp_date: Option<DateStruct>,
     #[serde(rename = "studyFirstPostDateStruct")]
-    pub study_posted_date: DateStruct,
+    pub study_posted_date: Option<DateStruct>,
     #[serde(rename = "resultsFirstPostDateStruct")]
     pub results_posted_date: Option<DateStruct>,
     #[serde(rename = "lastUpdatePostDateStruct")]
@@ -144,9 +145,9 @@ pub struct DateStruct
 #[derive(serde::Deserialize, Debug, PartialEq)]
 pub struct SponsorCollaboratorsModule
 {
-    #[serde(rename = "ResponsibleParty")]
+    #[serde(rename = "responsibleParty")]
     pub responsible_party: Option<ResponsibleParty>,
-    #[serde(rename = "LeadSponsor")]    
+    #[serde(rename = "leadSponsor")]    
     pub lead_sponsor: Option<Sponsor>,
     pub collaborators: Option<Vec<Sponsor>>,
 }
@@ -199,7 +200,7 @@ pub struct DesignModule
     #[serde(rename = "studyType")]
     pub study_type: Option<String>,
     #[serde(rename = "patientRegistry")]
-    pub patient_registry: Option<bool>,      
+    pub patient_registry: Option<bool>, 
     pub phases: Option<Vec<String>>,  
     #[serde(rename = "designInfo")]
     pub design_info: Option<DesignInfo>,
@@ -303,10 +304,7 @@ pub struct OverallOfficial
 #[derive(serde::Deserialize, Debug, PartialEq)]
 pub struct Location
 {
-    pub facility: Option<String>,
-    pub city: Option<String>,
     pub country: Option<String>,
-    pub state: Option<String>,
 }
 
 #[derive(serde::Deserialize, Debug, PartialEq)]
@@ -413,7 +411,7 @@ pub struct DerivedSection
 #[derive(serde::Deserialize, Debug, PartialEq)]
 pub struct ConditionBrowseModule
 {
-    meshes: Option<Vec<Mesh>>,
+    pub meshes: Option<Vec<Mesh>>,
 }
 
 #[derive(serde::Deserialize, Debug, PartialEq)]

@@ -10,265 +10,243 @@ pub struct Study
     pub scientific_title: Option<String>,
     pub acronym: Option<String>,
     
-    pub registration: Registration,
     pub identifiers: Option<Vec<Identifier>>,
+        
+    pub brief_description: Option<String>,
+    pub detailed_description: Option<String>,
+
+    pub registration: Registration,
+    pub study_dates: StudyDates,
+    pub study_status: Status,
+
+    pub organisations: Option<Vec<Organisation>>,
+    pub people: Option<Vec<Person>>,
+
+    pub design: Option<Design>,
+    pub enrolment:Option<Enrolment>,
+    pub participants: Option<Participants>,
+    pub age_groups: Option<Vec<String>>,
     
-    pub summary: Summary,
-
-    pub design: Design,
-    pub trial_types: Option<Vec<String>>,
-    pub trial_settings: Option<Vec<String>>,
-
     pub conditions: Option<Vec<Condition>>,
     pub interventions: Option<Vec<Intervention>>,
-
-    pub contacts: Option<Vec<StudyContact>>,
-    pub sponsors: Option<Vec<StudySponsor>>,
-    pub funders: Option<Vec<StudyFunder>>,
-
-    pub participant_types: Option<Vec<String>>,
-    pub participants: Participants,
-
-    pub recruitment: Recruitment,
+    pub keywords: Option<Vec<String>>,
+   
     pub countries: Option<Vec<String>>,
 
-    pub data_policies: Option<Vec<String>>,
-    pub results: Results,
-    pub links: Option<Vec<StudyLink>>,
-    pub files: Option<Vec<StudyFile>>,
-    pub ipd: IPD,
+    pub documents: Option<Vec<StudyDoc>>,
+    pub references: Option<Vec<Reference>>,
+    pub avail_ipd_docs: Option<Vec<AvailIpd>>,
+    pub links: Option<Vec<Link>>,
+    pub ipd: Option<IPD>,
 
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Registration
-{
-    pub date_id_assigned: Option<String>,
-    pub last_updated: Option<String>,
-}
-
-// Structs for titles and identifiers have differebt form
-// as trhey are only created when the source data exists,
-// and therefore do not need to be 'Options',
-// and are created most easily using the new() function
 
 #[derive(Serialize, Deserialize)]
 pub struct Identifier
 {
-    pub identifier_type_id: i32,
-    pub identifier_type: String,
-    pub identifier_value: String,
-}
-
-impl Identifier {
-    pub fn new(identifier_type_id: i32, identifier_type: String, identifier_value: String) -> Self {
-        Identifier {
-            identifier_type_id,
-            identifier_type,
-            identifier_value,
-        }
-   }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Summary
-{
-    pub plain_english_summary: Option<String>,
-    pub study_hypothesis: Option<String>,
-    pub primary_outcome: Option<String>,
-    pub secondary_outcome: Option<String>,
-    pub overall_end_date: Option<String>,
-    pub trial_website: Option<String>,
+    pub source: String,
+    pub value: String,
+    pub id_type: Option<String>,
+    pub org: Option<String>,
+    pub link: Option<String>,
 }
 
 
 #[derive(Serialize, Deserialize)]
-pub struct Ethics
+pub struct Registration
 {
-    pub ethics_approval_required: Option<String>,
-    pub ethics_approval: Option<String>,
+    pub date_first_posted: Option<String>,
+    pub date_first_posted_type: Option<String>,
+    pub date_last_updated: Option<String>,
+    pub date_last_updated_type: Option<String>,
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct StudyDates
+{
+    pub study_start: Option<String>,
+    pub study_start_type: Option<String>,
+    pub primary_comp: Option<String>,
+    pub primary_comp_type: Option<String>,
+    pub completion: Option<String>,
+    pub completion_type: Option<String>,
+    pub results_posted: Option<String>,
+    pub results_posted_type: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct EthicsCommittee
+pub struct Status
 {
-    pub name: Option<String>,
-    pub approval_status: Option<String>,
-    pub status_date: Option<String>,
-    pub committee_reference: Option<String>,
+    pub overall_status: Option<String>,
+    pub last_known_status: Option<String>,
+    pub has_results: Option<bool>,
+    pub status_verified_date: Option<String>,
+    pub why_stopped: Option<String>,
+    pub has_expanded_access: Option<bool>,
+    pub ea_nct_id: Option<String>,
+    pub status_for_nct_id: Option<String>,
 }
 
+
 #[derive(Serialize, Deserialize)]
-pub struct OutcomeMeasure
+pub struct Organisation
 {
-    pub variable: Option<String>,
-    pub method: Option<String>,
-    pub timepoints: Option<String>,
+    pub org_type: String,
+    pub org_name: String,
+    pub org_class: Option<String>,
 }
+
+
 
 #[derive(Serialize, Deserialize)]
 pub struct Design
 {
-    pub study_design: Option<String>,
-    pub primary_study_design: Option<String>,
-    pub secondary_study_design: Option<String>,
+    pub study_type: Option<String>,
+    pub patient_registry: Option<bool>,
+
+    pub phases: Option<String>,  
+
+    pub allocation: Option<String>,
+    pub intervention_model: Option<String>,
+    pub intervention_model_description: Option<String>, 
+    pub primary_purpose: Option<String>,
+
+    pub masking: Option<String>,
+    pub masking_description: Option<String>,
+    pub who_masked: Option<String>,
+
+    pub observational_model: Option<String>,
+    pub time_perspective: Option<String>,
+
+    pub bio_spec_retention: Option<String>,
+    pub bio_spec_description: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Condition
+pub struct Enrolment
 {
-    pub description: Option<String>,
-    pub disease_class1: Option<String>,
-    pub disease_class2: Option<String>,
-}
-
-
-#[derive(Serialize, Deserialize)]
-pub struct Intervention 
-{
-    pub description: Option<String>,
-    pub int_type: Option<String>,
-    pub pharma_study_types: Option<String>,
-    pub phase: Option<String>,
-    pub drug_names: Option<String>,
-}
-
-
-#[derive(Serialize, Deserialize)]
-pub struct StudyContact
-{
-    pub title: Option<String>,
-    pub forename: Option<String>,
-    pub surname: Option<String>,
-    pub orcid: Option<String>,
-    pub contact_types: Option<Vec<String>>,
-    pub address: Option<String>,
-    pub city: Option<String>,
-    pub country: Option<String>,
-    pub email: Option<String>,
-    pub privacy: Option<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct StudySponsor
-{
-    pub organisation: Option<String>,
-    pub website: Option<String>,
-    pub sponsor_type: Option<String>,
-    pub ror_id: Option<String>,  
-    pub address: Option<String>,
-    pub city: Option<String>,
-    pub country: Option<String>,
-    pub email: Option<String>,
-    pub privacy: Option<String>,
-    pub commercial_status: Option<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct StudyFunder
-{
-    pub name: Option<String>,
-    pub fund_ref: Option<String>,
+    pub enrol_numbers: Option<i32>,
+    pub enrol_type: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Participants
 {
-    pub age_range: Option<String>,
-    pub l_age_limit: Option<String>,
-    pub l_age_limit_num: Option<f32>,
-    pub l_age_limit_units: Option<String>,
-    pub u_age_limit: Option<String>,
-    pub u_age_limit_num: Option<f32>,
-    pub u_age_limit_units: Option<String>,
-    pub gender: Option<String>,
-    pub inclusion: Option<String>,
-    pub exclusion: Option<String>,
-    pub patient_info_sheet: Option<String>,
+    pub eligibility_criteria: Option<String>,
+    pub healthy_volunteers: Option<bool>,
+    pub sex: Option<String>,
+    pub gender_based: Option<bool>,
+    pub gender_description: Option<String>,
+    pub minimum_age: Option<String>,
+    pub maximum_age: Option<String>,
+    pub study_population: Option<String>,
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct Condition
+{
+    pub term: String,
+    pub id: Option<String>,
+    pub id_type: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Recruitment
+pub struct Intervention
 {
-    pub target_enrolment: Option<String>,
-    pub total_final_enrolment: Option<String>,
-    pub total_target: Option<String>,
-    pub recruitment_start: Option<String>,
-    pub recruitment_end: Option<String>,
-    pub recruitment_start_status_override: Option<String>,
-    pub recruitment_status_override: Option<String>,
+    pub term: String,
+    pub id: Option<String>,
+    pub id_type: Option<String>,
 }
 
+/* 
 #[derive(Serialize, Deserialize)]
 pub struct StudyCentre
 {
     pub name: Option<String>,
-    pub address: Option<String>,
     pub city: Option<String>,
     pub state: Option<String>,
     pub country: Option<String>,
 }
+*/
+
 
 #[derive(Serialize, Deserialize)]
-pub struct Results
+pub struct Person
 {
-    pub publication_plan: Option<String>,
-    pub intent_to_publish: Option<String>,
-    pub publication_details: Option<String>,
-    pub publication_stage: Option<String>,
-    pub biomed_related: Option<bool>, 
-    pub basic_report: Option<String>,
-    pub plain_english_report: Option<String>,
+    pub source: String,
+    pub role: Option<String>,
+    pub title: Option<String>,
+    pub name: Option<String>,
+    pub affiliation: Option<String>,
+    pub email: Option<String>,
 }
+
+
+#[derive(Serialize, Deserialize)]
+pub struct RespParty
+{
+    pub rp_type: Option<String>,
+    pub investigator_full_name: Option<String>,
+    pub investigator_title: Option<String>,
+    pub investigator_affiliation: Option<String>,
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct Reference
+{
+    pub pmid: Option<String>,
+    pub ref_type: Option<String>,
+    pub citation: Option<String>,
+    pub retracted: bool,
+    pub retractions: Option<String>,
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct AvailIpd
+{
+    pub id: Option<String>,
+    pub ipd_type: Option<String>,
+    pub url: Option<String>,
+    pub comment: Option<String>,
+}
+
+
+#[derive(Serialize, Deserialize)]
+pub struct Link
+{
+    pub label: Option<String>,
+    pub url: Option<String>,
+}
+
 
 #[derive(Serialize, Deserialize)]
 pub struct IPD
 {
-    pub ipd_sharing_plan: bool,    
-    pub ipd_sharing_statement: Option<String>,
-
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct StudyLink
-{
-    pub link_type: Option<String>,
-    pub link_url: Option<String>,
+    pub ipd_sharing: Option<String>,   
     pub description: Option<String>,
-    pub date_created: Option<String>,
-    pub date_uploaded: Option<String>,
-}  
-
-// Not serialised, but used as an intermediary struct
-// when constructing A StudyFile
-
-pub struct LocalFile
-{
-    pub file_type: Option<String>,
-    pub file_id: Option<String>,
-    pub description: Option<String>,
-    pub download_filename: Option<String>,
-    pub version: Option<String>,
-    pub length: Option<i32>,
-    pub mime_type: Option<String>,
-    pub date_created: Option<String>,
-    pub date_uploaded: Option<String>,
+    pub info_types: Option<String>,
+    pub time_frame: Option<String>,
+    pub access_criteria: Option<String>,
+    pub url: Option<String>,
 }
 
 
+
 #[derive(Serialize, Deserialize)]
-pub struct StudyFile
+pub struct StudyDoc
 {
-    pub file_type: Option<String>,
-    pub file_id: Option<String>,
-    pub description: Option<String>,
-    pub download_url: Option<String>,       
-    pub download_filename: Option<String>,
-    pub name: Option<String>,
-    pub version: Option<String>,
-    pub length: Option<i32>,
-    pub mime_type: Option<String>,
-    pub is_public: Option<bool>, 
-    pub date_created: Option<String>,
-    pub date_uploaded: Option<String>,
+    pub type_abbrev: Option<String>,
+    pub has_protocol: Option<bool>,
+    pub has_sap: Option<bool>,
+    pub has_icf: Option<bool>,
+    pub label: Option<String>,
+    pub date: Option<String>,
+    pub upload_date: Option<String>,
+    pub filename: Option<String>,
+    pub size: Option<i32>,
 }
